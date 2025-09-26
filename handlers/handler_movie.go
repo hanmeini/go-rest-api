@@ -21,6 +21,50 @@ var validate *validator.Validate
 // Initialize validator
 func init() {
 	validate = validator.New()
+
+	// Add dummy data for testing/demo
+	seedDummyData()
+}
+
+// seedDummyData adds sample movies to the database
+func seedDummyData() {
+	dummyMovies := []models.Movie{
+		{
+			ID:         "550e8400-e29b-41d4-a716-446655440001",
+			Judul:      "The Dark Knight",
+			Genre:      "Action",
+			TahunRilis: 2008,
+			Sutradara:  "Christopher Nolan",
+			Pemeran:    []string{"Christian Bale", "Heath Ledger", "Aaron Eckhart"},
+			CreatedAt:  time.Now().Add(-24 * time.Hour),
+			UpdatedAt:  time.Now().Add(-24 * time.Hour),
+		},
+		{
+			ID:         "550e8400-e29b-41d4-a716-446655440002",
+			Judul:      "Inception",
+			Genre:      "Sci-Fi",
+			TahunRilis: 2010,
+			Sutradara:  "Christopher Nolan",
+			Pemeran:    []string{"Leonardo DiCaprio", "Marion Cotillard", "Tom Hardy"},
+			CreatedAt:  time.Now().Add(-48 * time.Hour),
+			UpdatedAt:  time.Now().Add(-48 * time.Hour),
+		},
+		{
+			ID:         "550e8400-e29b-41d4-a716-446655440003",
+			Judul:      "Parasite",
+			Genre:      "Thriller",
+			TahunRilis: 2019,
+			Sutradara:  "Bong Joon-ho",
+			Pemeran:    []string{"Song Kang-ho", "Lee Sun-kyun", "Cho Yeo-jeong"},
+			CreatedAt:  time.Now().Add(-72 * time.Hour),
+			UpdatedAt:  time.Now().Add(-72 * time.Hour),
+		},
+	}
+
+	// Add dummy movies to database
+	for _, movie := range dummyMovies {
+		moviesDB[movie.ID] = movie
+	}
 }
 
 // CreateMovieHandler handles POST /api/movies

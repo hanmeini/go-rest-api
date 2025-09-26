@@ -8,6 +8,8 @@ REST API sederhana untuk manajemen data film, dibangun dengan Go, `gorilla/mux`,
 - CORS middleware (mendukung GET, POST, PUT, DELETE, OPTIONS)
 - Health check endpoint
 - Unit test untuk handler pembuatan film
+- Token-based auth sederhana (Login/Logout) dengan in-memory token store
+- Middleware otentikasi untuk melindungi semua endpoint film
 
 ## Teknologi
 - Go (module: `go-flix-api`)
@@ -21,7 +23,13 @@ REST API sederhana untuk manajemen data film, dibangun dengan Go, `gorilla/mux`,
 ├─ main.go
 ├─ handlers/
 │  ├─ handler_movie.go
+│  ├─ auth_handler.go
 │  └─ handler_movie_test.go
+├─ middleware/
+│  └─ auth_middleware.go
+├─ auth/
+│  ├─ auth.go
+│  └─ auth_test.go
 ├─ models/
 │  └─ movie.go
 ├─ go.mod
@@ -41,6 +49,19 @@ Server akan berjalan di:
 
 Log startup akan menampilkan daftar endpoint yang tersedia.
 
+## Konfigurasi (Users)
+File `config.yaml` berisi daftar user untuk login:
+
+```yaml
+users:
+  - username: "user1"
+    password: "password123"
+  - username: "user2"
+    password: "password456"
+```
+
+`main.go` akan memanggil `auth.LoadConfig("config.yaml")` saat startup dan gagal bila file tidak valid.
+
 ## CORS
 CORS sudah diaktifkan via `corsMiddleware` di `main.go`:
 - Mengizinkan origin `*`
@@ -55,6 +76,12 @@ w.Header().Set("Access-Control-Allow-Credentials", "true")
 ## Endpoint API
 
 Base path: `/api`
+
+- POST `/api/login` — login, mengembalikan token
+- POST `/api/logout` — logout, mencabut token saat ini
+
+Semua endpoint film di bawah ini DIPROTEKSI middleware `AuthMiddleware`.
+Header `Authorization: Bearer <token>` wajib disertakan.
 
 - POST `/api/movies` — buat film baru
 - GET `/api/movies` — ambil semua film
@@ -105,10 +132,31 @@ Utility:
 
 ## Contoh cURL
 
+- Login (dapatkan token)
+```bash
+TOKEN=$(curl -s -X POST http://localhost:8080/api/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"user1","password":"password123"}' | jq -r .token)
+echo "TOKEN=$TOKEN"
+```
+
+- Akses endpoint film (harus menyertakan Bearer token)
+```bash
+curl http://localhost:8080/api/movies \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+- Logout (mencabut token)
+```bash
+curl -X POST http://localhost:8080/api/logout \
+  -H "Authorization: Bearer $TOKEN"
+```
+
 - Create
 ```bash
 curl -X POST http://localhost:8080/api/movies \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
   -d '{
     "judul": "The Dark Knight",
     "genre": "Action",
@@ -120,18 +168,21 @@ curl -X POST http://localhost:8080/api/movies \
 
 - Get all
 ```bash
-curl http://localhost:8080/api/movies
+curl http://localhost:8080/api/movies \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 - Get by ID
 ```bash
-curl http://localhost:8080/api/movies/{id}
+curl http://localhost:8080/api/movies/{id} \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 - Update
 ```bash
 curl -X PUT http://localhost:8080/api/movies/{id} \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
   -d '{
     "genre": "Action/Crime",
     "pemeran": ["Christian Bale", "Heath Ledger", "Aaron Eckhart"]
@@ -140,7 +191,8 @@ curl -X PUT http://localhost:8080/api/movies/{id} \
 
 - Delete
 ```bash
-curl -X DELETE http://localhost:8080/api/movies/{id}
+curl -X DELETE http://localhost:8080/api/movies/{id} \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ## Testing
@@ -153,11 +205,13 @@ go test ./...
 Lebih detail:
 ```bash
 go test -v ./handlers
+go test -v ./auth
 go test -v ./handlers -run ^TestCreateMovie_Success$
 go test -cover ./...
 ```
 
 ## Catatan
 - Database in-memory akan kosong ulang setiap restart.
+- Token disimpan in-memory; server restart akan menghapus token aktif.
 - Jika Anda mengubah origin frontend (mis. `localhost` vs `127.0.0.1`), pastikan setelan CORS sesuai.
 - Peringatan `favicon.ico` 404 di frontend aman diabaikan; tambahkan `<link rel="icon" href="data:,">` jika perlu.

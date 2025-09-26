@@ -5,7 +5,9 @@ import (
 	"log"
 	"net/http"
 
+	"go-flix-api/auth"
 	"go-flix-api/handlers"
+	"go-flix-api/middleware"
 
 	"github.com/gorilla/mux"
 )
@@ -13,7 +15,7 @@ import (
 // CORS middleware
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*") // Mengizinkan semua origin
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		if r.Method == "OPTIONS" {
@@ -25,24 +27,36 @@ func corsMiddleware(next http.Handler) http.Handler {
 }
 
 func main() {
+	// Load configuration (users) from config.yaml
+	if err := auth.LoadConfig("config.yaml"); err != nil {
+		log.Fatalf("failed to load config: %v", err)
+	}
+
 	// Create new router using gorilla/mux
 	router := mux.NewRouter()
 
 	// Register API routes
 	api := router.PathPrefix("/api").Subrouter()
 
-	// Movies routes
-	api.HandleFunc("/movies", handlers.CreateMovieHandler).Methods("POST", "OPTIONS") 
-	api.HandleFunc("/movies", handlers.GetMoviesHandler).Methods("GET")
-	api.HandleFunc("/movies/{id}", handlers.GetMovieByIDHandler).Methods("GET")
-	api.HandleFunc("/movies/{id}", handlers.UpdateMovieHandler).Methods("PUT", "OPTIONS") 
-	api.HandleFunc("/movies/{id}", handlers.DeleteMovieHandler).Methods("DELETE", "OPTIONS")
+	// Public auth routes
+	api.HandleFunc("/login", handlers.LoginHandler).Methods("POST", "OPTIONS")
+	api.HandleFunc("/logout", handlers.LogoutHandler).Methods("POST", "OPTIONS")
+
+	// Protected subrouter for movie routes
+	protected := api.PathPrefix("").Subrouter()
+	protected.Use(middleware.AuthMiddleware)
+
+	// Movies routes (protected)
+	protected.HandleFunc("/movies", handlers.CreateMovieHandler).Methods("POST", "OPTIONS")
+	protected.HandleFunc("/movies", handlers.GetMoviesHandler).Methods("GET")
+	protected.HandleFunc("/movies/{id}", handlers.GetMovieByIDHandler).Methods("GET")
+	protected.HandleFunc("/movies/{id}", handlers.UpdateMovieHandler).Methods("PUT", "OPTIONS")
+	protected.HandleFunc("/movies/{id}", handlers.DeleteMovieHandler).Methods("DELETE", "OPTIONS")
 
 	// Health check route
 	router.HandleFunc("/health", handlers.HealthCheckHandler).Methods("GET")
 
 	// Apply CORS middleware to router
-	// Cara Anda menggunakan .Use() sudah benar dan ini adalah cara yang lebih modern!
 	router.Use(corsMiddleware)
 
 	// Start server on port 8080
