@@ -28,10 +28,14 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		if !auth.IsTokenValid(token) {
+		claims, err := auth.ValidateJWT(token)
+		if err != nil {
 			http.Error(w, "invalid or expired token", http.StatusUnauthorized)
 			return
 		}
+
+		// Add username to request context for use in handlers
+		r.Header.Set("X-Username", claims.Username)
 
 		next.ServeHTTP(w, r)
 	})
