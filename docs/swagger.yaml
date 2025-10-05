@@ -1,0 +1,294 @@
+basePath: /
+definitions:
+  models.CreateMovieRequest:
+    properties:
+      created_by:
+        description: opsional, bisa diisi dari JWT
+        type: string
+      genre:
+        type: string
+      judul:
+        type: string
+      pemeran:
+        items:
+          type: string
+        type: array
+      sutradara:
+        type: string
+      tahun_rilis:
+        minimum: 1888
+        type: integer
+    required:
+    - genre
+    - judul
+    - pemeran
+    - sutradara
+    - tahun_rilis
+    type: object
+  models.Movie:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      deleted_at:
+        type: string
+      genre:
+        type: string
+      id:
+        type: string
+      judul:
+        type: string
+      pemeran:
+        items:
+          type: string
+        type: array
+      sutradara:
+        type: string
+      tahun_rilis:
+        type: integer
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+      version:
+        type: integer
+    type: object
+  models.UpdateMovieRequest:
+    properties:
+      genre:
+        type: string
+      judul:
+        type: string
+      pemeran:
+        items:
+          type: string
+        type: array
+      sutradara:
+        type: string
+      tahun_rilis:
+        type: integer
+      updated_by:
+        description: opsional, bisa diisi dari JWT
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: REST API untuk manajemen film dengan autentikasi JWT
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Go Flix API
+  version: "1.0"
+paths:
+  /api/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user and return JWT token
+      parameters:
+      - description: Login credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          properties:
+            password:
+              type: string
+            username:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid JSON
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Invalid credentials
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to generate token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: User login
+      tags:
+      - auth
+  /api/logout:
+    post:
+      description: Revoke JWT token (logout)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Missing or invalid Authorization header
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: User logout
+      tags:
+      - auth
+  /movies:
+    get:
+      description: Get a list of all movies
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Movie'
+            type: array
+      summary: Get all movies
+      tags:
+      - movies
+    post:
+      consumes:
+      - application/json
+      description: Create a new movie
+      parameters:
+      - description: Movie to create
+        in: body
+        name: movie
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateMovieRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Movie'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a new movie
+      tags:
+      - movies
+  /movies/{id}:
+    delete:
+      description: Soft delete a movie by its ID
+      parameters:
+      - description: Movie ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete a movie
+      tags:
+      - movies
+    get:
+      description: Get a movie by its ID
+      parameters:
+      - description: Movie ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Movie'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get movie by ID
+      tags:
+      - movies
+    put:
+      consumes:
+      - application/json
+      description: Update a movie by its ID
+      parameters:
+      - description: Movie ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Movie fields to update
+        in: body
+        name: movie
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateMovieRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update a movie
+      tags:
+      - movies
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

@@ -1,5 +1,16 @@
+server:
+  port: "8080"
+
+database:
+  host: "localhost"
+  port: "5432"
+  user: "postgres"
+  password: "ahmadraihan123"
+  dbname: "go_flix_db" 
+
+jwt:
+  secret: "kunci_rahasia_yang_sangat_aman"
+
 users:
   - username: "user1"
     password: "password123"
-  - username: "user2"
-    password: "password456"
